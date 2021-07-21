@@ -1,0 +1,157 @@
+2021-07-12：
+	1.后期重点：eja-data-service 数据采集服务、eja-olap-service  数据计算服务
+	2.代码控制：
+		1.类、方法注释写全
+		2.注意代码规范，静态方法定义等
+		3.注意项目中多数据源的使用
+		4.注意项目中的分片的使用
+		5.必须使用测试用例进行代码测试
+
+2021-07-13：
+	1.任务：
+		完成指定表的月数据和年数据统计 WaeMeterStatServiceTest.statMeterDaily
+		需要注意的是，数据覆盖，统计查询
+
+		 /**
+		 * 统计指定表所有月量数据
+		 * 1.查询 表: eja_wae_meter_daily ，根据月份合并，求每个月的表数据(未做功能：如果出现月份不连续有缺失的需要补齐)
+		 * 2.将数据记录进数据库（注意数据覆盖和插入的问题）
+		 * @param waeMeter 指定的表信息
+		 */
+		statMeterAllMonthly
+
+2021-07-14：
+	1.基于昨天的写法，对所有岁电表进行月数据统计和年数据统计
+		WaeMeterStatServiceTest.statAllMeterAllDaily()所有表的日数据统计
+		WaeMeterStatTaskController中添加一个控制器
+
+	2.单表的日/月/年 的统计数据
+
+	/*
+	// 写入用量数据
+        // todo 区分 update 和 insert 的数据
+        List<WaeMeterDaily> updateData = new ArrayList<>();
+        List<WaeMeterDaily> insertData = new ArrayList<>();
+
+        for (WaeMeterDaily waeMeterDaily : waeMeterDailyList) {
+            WaeMeterDaily exists = waeMeterDailyService.getOne(waeMeter, waeMeterDaily.getStatTime());
+            if (ObjectUtil.isNotNull(exists)) {
+                waeMeterDaily.setId(waeMeterDaily.getId());
+                updateData.add(waeMeterDaily);
+                log.info("更新日用量:{}", waeMeterDaily);
+                continue;
+            }
+            insertData.add(waeMeterDaily);
+            log.info("保存日用量:{}", waeMeterDaily);
+        }
+        // todo 先每个测试10条
+        if (insertData.size()>10){
+            insertData = insertData.subList(0,10);
+        }
+        updateData = updateData.subList(0,10);
+        log.info("---> 下面开始打印 insertData 数据----------------------------------------------------------------");
+        insertData.forEach(System.out::println);
+        log.info("---> 下面开始打印 updateData 数据----------------------------------------------------------------");
+        updateData.forEach(System.out::println);
+        // todo 执行批量插入
+        waeMeterDailyService.saveBatch(insertData,insertData.size());
+        // todo 执行批量修改
+        waeMeterDailyService.updateBatchById(updateData,updateData.size());
+        System.out.println("-----------------------over--------------------------------------------------------------");
+	*/
+
+		/**
+		    @Override
+			public boolean updateBatchById(Collection<WaeMeterDaily> entityList, int batchSize) {
+				return super.updateBatchById(entityList, batchSize);
+			}
+		*/
+
+2021-07-15：
+	3.一个水电表的日/月/年数据（时间起、时间止、指定表号）
+		--------begin--------
+
+		a.首先修改所有处于这段时间内的一个 eja_wae_meter_daily 表中的数据 --> 从eja_wae_meter_reading表中查询数据
+		b。判断日期长度，如果>30天，则更新对应的月份，eja_wae_meter_monthly -->  从eja_wae_meter_daily表中查询数据来做这个统计
+		c。如果跨年。。。 则更新 eja_wae_meter_yearly
+		--------over---------
+
+	// -------------(未做功能)-----------------
+	// 4.数据恢复功能（指定一块表的一段时间）
+
+
+	1.前面的代码优化 - 增加实体类的问题
+
+	2.日用量的流程图
+		1.查询出所有的表信息
+		2.循环所有的表,查询eja_wae_meter_reading 中单个表的所有 历史读数 记录
+		3.遍历历史读数记录
+			3.1 顺序读取记录
+			3.2 获取记录中的日期,算出下一个日读数
+			3.3 判断下一个日读数是否和当前这个记录是连续的->
+				3.3.1 如果连续:
+					3.3.1.1:(用下一天的读数- 当前日期的读数) * 变比 = 当前日期的用量
+					3.3.1.2:创建一个标识为NORMAL的用量记录
+				3.3.2 如果不连续
+					3.3.2.1:计算当前记录和后面最近一条记录相隔的天数
+					3.3.2.1:进行均值计算(求出每天用量的一个平均值,将中间缺失的日数据补齐)
+
+		下一条记录的日期信息是否等于当前记录日期的下一天
+
+禅道密码:12345678@027yun.com
+
+2021-07-16:
+	1.日用量的流程图
+	2.就是日/月/年的数据
+		然后就是年和日的环比
+		月的同比和环比
+
+
+		排除楼栋和居民的---
+
+2021-07-19:
+	1.完成 首页-用电数据模块-折线图
+	2.完成 首页-用水数据模块-折线图
+
+
+2021-07-20:
+	1.完成 首页-日用能数据模块-折线图
+		1.1.用电数据:
+			每个月的总用电量(此处为110KV变电站<变电站id:1394137772305940479>的日数据统计而来).
+		1.2.用水数据:
+			每个月的总用水量(此处是所有泵房每个月求和计算出来的<泵房的unit_type=20>)
+		1.3.日用能数据: 当前日期的前三十天的日用水/电的数据 (上面是根据这个来统计自然月的数据)
+			水:	查询所有泵房的日数据
+			电: 查询变电站的日数据
+
+	2.学会了部署springmvc项目,部署流程:
+		项目部署的方式:
+			// 查询当前这个要部署的服务的进程
+			ps -ef|grep /eja-ops
+			// 杀掉这个进程
+			 kill -15 25040
+			// 启动命令(有启动日志.可以检查是否启动成功)
+			./catalina.sh  run
+			//  至此可以检查启动是否成功
+		----------------------------------------------
+			// 关闭
+			./shutdown.sh
+			// 真正的启动命令,没有日志
+			./startup.sh
+
+
+	3.将数据库同步数据同步到本地
+		将energy 数据源的staff表的数据中的name,...  --> sys_user
+		Hs_Staffer --> sys_user
+			StafferNo
+			StafferCode
+			SpouseWorkPlace
+			UserName
+
+
+	4.优化之前的代码
+
+
+2021-07-20
+	// 待做:
+	// 夜间抄 水 表 ,WaeService --> eja_water_nightly_reading 读数放到这里,计算出来的差值放这里eja_water_nightly
